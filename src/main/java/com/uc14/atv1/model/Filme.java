@@ -1,37 +1,41 @@
 package com.uc14.atv1.model;
 
-import java.util.ArrayList;
+import jakarta.persistence.*; // Se usar Spring Boot 3+ (ou javax.persistence.* para versões mais antigas)
 import java.util.List;
 
+@Entity
+@Table(name = "filme")
 public class Filme {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
     private String titulo;
-    private String sinopse;
-    private String genero;
+    private String diretor;
+    
+    @Column(name = "ano_lancamento")
     private Integer anoLancamento;
-    private List<Analise> analises = new ArrayList<>(); // Lista interna para guardar análises deste filme
+    private String genero;
 
- 
+    // Mapeamento: um Filme tem Muitas Análises
+    @OneToMany(mappedBy = "filme", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Analise> analises;
+
+    // Construtores
     public Filme() {}
-
-    public Filme(Long id, String titulo, String sinopse, String genero, Integer anoLancamento) {
-        this.id = id;
-        this.titulo = titulo;
-        this.sinopse = sinopse;
-        this.genero = genero;
-        this.anoLancamento = anoLancamento;
-    }
-
+    
+    // Getters e Setters (Obrigatórios para o JPA)
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     public String getTitulo() { return titulo; }
     public void setTitulo(String titulo) { this.titulo = titulo; }
-    public String getSinopse() { return sinopse; }
-    public void setSinopse(String sinopse) { this.sinopse = sinopse; }
-    public String getGenero() { return genero; }
-    public void setGenero(String genero) { this.genero = genero; }
+    public String getDiretor() { return diretor; }
+    public void setDiretor(String diretor) { this.diretor = diretor; }
     public Integer getAnoLancamento() { return anoLancamento; }
     public void setAnoLancamento(Integer anoLancamento) { this.anoLancamento = anoLancamento; }
+    public String getGenero() { return genero; }
+    public void setGenero(String genero) { this.genero = genero; }
     public List<Analise> getAnalises() { return analises; }
     public void setAnalises(List<Analise> analises) { this.analises = analises; }
 }
