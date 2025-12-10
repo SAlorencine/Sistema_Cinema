@@ -5,112 +5,85 @@ import com.uc14.atv1.model.Analise;
 import com.uc14.atv1.repository.FilmeRepository;
 import com.uc14.atv1.repository.AnaliseRepository;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity; // <-- ESSA LINHA CORRIGE O ERRO
+import org.springframework.stereotype.Controller; // Importante: Controller, não RestController
+import org.springframework.ui.Model; // Usado para enviar dados para o HTML
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 import java.util.Optional;
 
-@RestController // Indica que é um controlador REST
-@RequestMapping("/api/filmes") // URL base para todos os endpoints deste controlador
+@Controller // Mudamos de @RestController para @Controller para retornar HTML
+@RequestMapping("/filmes") // URL base alinhada com os links do seu HTML
 public class FilmeController {
+    
+    @GetMapping
+    public String listarFilmes(Model model) {
+        // Busca todos os filmes e adiciona ao "model" para o Thymeleaf usar
+        model.addAttribute("filmes", filmeRepository.findAll());
+        return "lista"; // Nome do arquivo HTML da lista (sem .html)
+    }
+    
+    @GetMapping("/") // Mapeia a raiz (o endereço http://localhost:8080/)
+    public String redirectToFilmes() {
+    return "redirect:/filmes"; // Redireciona o navegador para a lista de filmes
+}
 
-    @Autowired // Injeção de dependência dos repositórios
+    @Autowired
     private FilmeRepository filmeRepository;
 
     @Autowired
     private AnaliseRepository analiseRepository;
 
     // --------------------------------------------------------------------------
-    // ENDPOINTS DE FILMES
+    // LISTAGEM (Página Inicial)
     // --------------------------------------------------------------------------
+    
 
-    /**
-     * Requisito GET: Listar todos os filmes
-     * URL: GET /api/filmes
-     */
-    @GetMapping
-    public List<Filme> getAllFilmes() {
-        return filmeRepository.findAll();
+    // --------------------------------------------------------------------------
+    // CADASTRO DE FILME
+    // --------------------------------------------------------------------------
+    
+    // Passo 1: Abrir o formulário
+    @GetMapping("/cadastrar")
+    public String formCadastro(Model model) {
+        model.addAttribute("filme", new Filme()); // Objeto vazio para o formulário preencher
+        return "cadastro"; // Nome do arquivo HTML de cadastro
     }
 
-    /**
-     * Requisito GET: Buscar filme por ID
-     * URL: GET /api/filmes/{id}
-     */
-    @GetMapping("/{id}")
-    public ResponseEntity<Filme> getFilmeById(@PathVariable Long id) {
-        Optional<Filme> filme = filmeRepository.findById(id);
-        if (filme.isPresent()) {
-            return ResponseEntity.ok(filme.get()); // Retorna 200 OK com o filme
+    // Passo 2: Receber os dados do formulário e salvar
+    @PostMapping("/cadastrar")
+    public String salvarFilme(@ModelAttribute Filme filme) { // @ModelAttribute pega dados de Form HTML
+        filmeRepository.save(filme);
+        return "redirect:/filmes"; // Redireciona de volta para a lista após salvar
+    }
+
+    // --------------------------------------------------------------------------
+    // DETALHES E ANÁLISE
+    // --------------------------------------------------------------------------
+
+    // Passo 1: Ver detalhes e lista de análises
+    @GetMapping("/detalhes/{id}")
+    public String detalhesFilme(@PathVariable Long id, Model model) {
+        Optional<Filme> filmeOpt = filmeRepository.findById(id);
+        
+        if (filmeOpt.isPresent()) {
+            Filme filme = filmeOpt.get();
+            model.addAttribute("filme", filme);
+            model.addAttribute("novaAnalise", new Analise()); // Objeto vazio para o form de análise
+            return "detalhes"; // Nome do arquivo HTML de detalhes
         }
-        return ResponseEntity.notFound().build(); // Retorna 404 Not Found
+        return "redirect:/filmes"; // Se não achar o filme, volta pra lista
     }
 
-    /**
-     * Requisito POST: Criar um novo filme
-     * URL: POST /api/filmes
-     */
-    @PostMapping
-    public Filme createFilme(@RequestBody Filme novoFilme) {
-        return filmeRepository.save(novoFilme); // Retorna 200/201 com o filme criado
-    }
-
-    /**
-     * Requisito PUT: Atualizar um filme existente
-     * URL: PUT /api/filmes/{id}
-     */
-    @PutMapping("/{id}")
-    public ResponseEntity<Filme> updateFilme(@PathVariable Long id, @RequestBody Filme filmeDetalhes) {
-        return filmeRepository.findById(id)
-            .map(filmeExistente -> {
-                // Atualiza os campos do filme existente
-                filmeExistente.setTitulo(filmeDetalhes.getTitulo());
-                filmeExistente.setDiretor(filmeDetalhes.getDiretor());
-                filmeExistente.setAnoLancamento(filmeDetalhes.getAnoLancamento());
-                filmeExistente.setGenero(filmeDetalhes.getGenero());
-                Filme atualizado = filmeRepository.save(filmeExistente);
-                return ResponseEntity.ok(atualizado); // Retorna 200 OK
-            }).orElse(ResponseEntity.notFound().build()); // Retorna 404 Not Found se o ID não existir
-    }
-
-    /**
-     * Requisito DELETE: Deletar um filme
-     * URL: DELETE /api/filmes/{id}
-     */
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteFilme(@PathVariable Long id) {
-        if (filmeRepository.existsById(id)) {
-            filmeRepository.deleteById(id);
-            return ResponseEntity.noContent().build(); // Retorna 204 No Content (sucesso, sem corpo)
+    // Passo 2: Salvar a análise enviada pelo form da página de detalhes
+    @PostMapping("/detalhes/{id}/analise")
+    public String salvarAnalise(@PathVariable Long id, @ModelAttribute Analise analise) {
+        Optional<Filme> filmeOpt = filmeRepository.findById(id);
+        
+        if (filmeOpt.isPresent()) {
+            analise.setFilme(filmeOpt.get()); // Relaciona a análise ao filme
+            analiseRepository.save(analise);
+            return "redirect:/filmes/detalhes/" + id; // Recarrega a página de detalhes para mostrar a nova nota
         }
-        return ResponseEntity.notFound().build(); // Retorna 404 Not Found
-    }
-    
-    // --------------------------------------------------------------------------
-    // ENDPOINTS DE ANÁLISES
-    // --------------------------------------------------------------------------
-    
-    /**
-     * Requisito GET: Listar análises de um filme específico
-     * URL: GET /api/filmes/{filmeId}/analises
-     */
-    @GetMapping("/{filmeId}/analises")
-    public List<Analise> getAnalisesByFilme(@PathVariable Long filmeId) {
-        return analiseRepository.findByFilmeId(filmeId);
-    }
-    
-    /**
-     * Requisito POST: Adicionar análise a um filme
-     * URL: POST /api/filmes/{filmeId}/analises
-     */
-    @PostMapping("/{filmeId}/analises")
-    public ResponseEntity<Analise> createAnalise(@PathVariable Long filmeId, @RequestBody Analise novaAnalise) {
-        return filmeRepository.findById(filmeId)
-            .map(filme -> {
-                novaAnalise.setFilme(filme); // Associa a análise ao filme encontrado
-                Analise salva = analiseRepository.save(novaAnalise);
-                return ResponseEntity.ok(salva); // Retorna 200/201 OK com a análise criada
-            }).orElse(ResponseEntity.notFound().build()); // Retorna 404 Not Found
+        return "redirect:/filmes";
     }
 }
