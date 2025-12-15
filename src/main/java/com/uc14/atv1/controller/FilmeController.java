@@ -5,85 +5,78 @@ import com.uc14.atv1.model.Analise;
 import com.uc14.atv1.repository.FilmeRepository;
 import com.uc14.atv1.repository.AnaliseRepository;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Controller; // Importante: Controller, não RestController
-import org.springframework.ui.Model; // Usado para enviar dados para o HTML
 import org.springframework.web.bind.annotation.*;
+import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.Transactional; // Adicione isso
 
+import java.util.List;
 import java.util.Optional;
 
-@Controller // Mudamos de @RestController para @Controller para retornar HTML
-@RequestMapping("/filmes") // URL base alinhada com os links do seu HTML
+@RestController
+@RequestMapping("/api/v1/filmes")
 public class FilmeController {
     
-    @GetMapping
-    public String listarFilmes(Model model) {
-        // Busca todos os filmes e adiciona ao "model" para o Thymeleaf usar
-        model.addAttribute("filmes", filmeRepository.findAll());
-        return "lista"; // Nome do arquivo HTML da lista (sem .html)
-    }
-    
-    @GetMapping("/") // Mapeia a raiz (o endereço http://localhost:8080/)
-    public String redirectToFilmes() {
-    return "redirect:/filmes"; // Redireciona o navegador para a lista de filmes
-}
-
     @Autowired
     private FilmeRepository filmeRepository;
 
     @Autowired
     private AnaliseRepository analiseRepository;
 
-    // --------------------------------------------------------------------------
-    // LISTAGEM (Página Inicial)
-    // --------------------------------------------------------------------------
-    
-
-    // --------------------------------------------------------------------------
-    // CADASTRO DE FILME
-    // --------------------------------------------------------------------------
-    
-    // Passo 1: Abrir o formulário
-    @GetMapping("/cadastrar")
-    public String formCadastro(Model model) {
-        model.addAttribute("filme", new Filme()); // Objeto vazio para o formulário preencher
-        return "cadastro"; // Nome do arquivo HTML de cadastro
+ 
+    @GetMapping
+    public List<Filme> listarFilmes() {
+        return filmeRepository.findAll();
     }
 
-    // Passo 2: Receber os dados do formulário e salvar
-    @PostMapping("/cadastrar")
-    public String salvarFilme(@ModelAttribute Filme filme) { // @ModelAttribute pega dados de Form HTML
-        filmeRepository.save(filme);
-        return "redirect:/filmes"; // Redireciona de volta para a lista após salvar
+    @GetMapping("/{id}")
+    @Transactional
+    public ResponseEntity<Filme> buscarFilmePorId(@PathVariable Long id) {
+        Optional<Filme> filme = filmeRepository.findById(id);
+        
+        return filme.map(f -> ResponseEntity.ok(f))
+                     .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
-    // --------------------------------------------------------------------------
-    // DETALHES E ANÁLISE
-    // --------------------------------------------------------------------------
+    @PostMapping
+    public ResponseEntity<Filme> salvarFilme(@RequestBody Filme filme) { 
+        Filme novoFilme = filmeRepository.save(filme);
+        return ResponseEntity.status(201).body(novoFilme);
+    }
 
-    // Passo 1: Ver detalhes e lista de análises
-    @GetMapping("/detalhes/{id}")
-    public String detalhesFilme(@PathVariable Long id, Model model) {
+    @PutMapping("/{id}")
+    public ResponseEntity<Filme> atualizarFilme(@PathVariable Long id, @RequestBody Filme filmeDetalhes) {
+        return filmeRepository.findById(id)
+            .map(filme -> {
+                filme.setTitulo(filmeDetalhes.getTitulo());
+                filme.setSinopse(filmeDetalhes.getSinopse()); 
+                filme.setGenero(filmeDetalhes.getGenero());   
+                filme.setAnoLancamento(filmeDetalhes.getAnoLancamento()); 
+                
+                Filme filmeAtualizado = filmeRepository.save(filme);
+                return ResponseEntity.ok(filmeAtualizado);
+            }).orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> deletarFilme(@PathVariable Long id) {
+        return filmeRepository.findById(id)
+            .map(filme -> {
+                filmeRepository.delete(filme);
+                return ResponseEntity.noContent().build();
+            }).orElseGet(() -> ResponseEntity.notFound().build()); 
+    }
+
+    @PostMapping("/{id}/analise")
+    public ResponseEntity<Analise> salvarAnalise(@PathVariable Long id, @RequestBody Analise analise) {
         Optional<Filme> filmeOpt = filmeRepository.findById(id);
         
         if (filmeOpt.isPresent()) {
-            Filme filme = filmeOpt.get();
-            model.addAttribute("filme", filme);
-            model.addAttribute("novaAnalise", new Analise()); // Objeto vazio para o form de análise
-            return "detalhes"; // Nome do arquivo HTML de detalhes
+            analise.setFilme(filmeOpt.get()); 
+            Analise novaAnalise = analiseRepository.save(analise);
+            return ResponseEntity.status(201).body(novaAnalise);
         }
-        return "redirect:/filmes"; // Se não achar o filme, volta pra lista
-    }
-
-    // Passo 2: Salvar a análise enviada pelo form da página de detalhes
-    @PostMapping("/detalhes/{id}/analise")
-    public String salvarAnalise(@PathVariable Long id, @ModelAttribute Analise analise) {
-        Optional<Filme> filmeOpt = filmeRepository.findById(id);
         
-        if (filmeOpt.isPresent()) {
-            analise.setFilme(filmeOpt.get()); // Relaciona a análise ao filme
-            analiseRepository.save(analise);
-            return "redirect:/filmes/detalhes/" + id; // Recarrega a página de detalhes para mostrar a nova nota
-        }
-        return "redirect:/filmes";
+        return ResponseEntity.notFound().build();
     }
 }

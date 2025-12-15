@@ -7,6 +7,5 @@ import java.util.List;
 
 @Repository
 public interface AnaliseRepository extends JpaRepository<Analise, Long> {
-    // Método customizado para buscar análises pelo ID do filme
     List<Analise> findByFilmeId(Long filmeId);
 }

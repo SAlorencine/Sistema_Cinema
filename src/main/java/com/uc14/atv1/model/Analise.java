@@ -17,9 +17,8 @@ public class Analise {
 
     private String autor;
 
-    // --- MUDANÇA DE INTEGER PARA DOUBLE ---
+   
     private Double nota; 
-    // --------------------------------------
 
     private String comentario;
 
@@ -42,7 +41,6 @@ public class Analise {
     public String getAutor() { return autor; }
     public void setAutor(String autor) { this.autor = autor; }
     
-    // Getters e Setters atualizados para Double
     public Double getNota() { return nota; }
     public void setNota(Double nota) { this.nota = nota; }
     

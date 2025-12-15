@@ -18,27 +18,33 @@ public class Filme {
     
     private String genero;
 
-    // --- NOVO CAMPO ADICIONADO PARA FUNCIONAR COM O HTML ---
     @Column(columnDefinition = "TEXT") // Permite textos longos no banco
     private String sinopse; 
-    // -------------------------------------------------------
 
     @OneToMany(mappedBy = "filme", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Analise> analises;
 
     public Filme() {}
     
-    // Getters e Setters
+    
+    public Integer getAno() { 
+        return this.anoLancamento; 
+    }
+    public void setAno(Integer ano) { 
+        this.anoLancamento = ano;
+    }
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     public String getTitulo() { return titulo; }
     public void setTitulo(String titulo) { this.titulo = titulo; }
+    
     public Integer getAnoLancamento() { return anoLancamento; }
     public void setAnoLancamento(Integer anoLancamento) { this.anoLancamento = anoLancamento; }
+    
     public String getGenero() { return genero; }
     public void setGenero(String genero) { this.genero = genero; }
     
-    // Getter e Setter da Sinopse
     public String getSinopse() { return sinopse; }
     public void setSinopse(String sinopse) { this.sinopse = sinopse; }
 
